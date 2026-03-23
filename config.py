@@ -2,7 +2,7 @@ import os
 import torch
 import timm
 
-DATA_DIR   = '/kaggle/input/mva-dlmi-2026-histopathology-ood-classification'
+DATA_DIR   = '/kaggle/input/competitions/mva-dlmi-2026-histopathology-ood-classification'
 TRAIN_PATH = os.path.join(DATA_DIR, 'train.h5')
 VAL_PATH   = os.path.join(DATA_DIR, 'val.h5')
 TEST_PATH  = os.path.join(DATA_DIR, 'test.h5')
