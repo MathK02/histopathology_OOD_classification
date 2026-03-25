@@ -79,31 +79,44 @@ def save(name, data):
     torch.save(data, os.path.join(model_dir, name))
 
 
-print('Extracting val...')
-d = extract(VAL_PATH, base_transform, 'train', 'val')
-save('val.pt', d)
-print(f'val: {d["features"].shape}')
+def exists(name):
+    path = os.path.join(model_dir, name)
+    if os.path.exists(path):
+        print(f'Skipping {name} (already exists)')
+        return True
+    return False
 
-print('Extracting train (base)...')
-d = extract(TRAIN_PATH, base_transform, 'train', 'train base')
-save('train_base.pt', d)
-print(f'train_base: {d["features"].shape}')
+
+if not exists('val.pt'):
+    print('Extracting val...')
+    d = extract(VAL_PATH, base_transform, 'train', 'val')
+    save('val.pt', d)
+    print(f'val: {d["features"].shape}')
+
+if not exists('train_base.pt'):
+    print('Extracting train (base)...')
+    d = extract(TRAIN_PATH, base_transform, 'train', 'train base')
+    save('train_base.pt', d)
+    print(f'train_base: {d["features"].shape}')
 
 for i in range(N_AUG):
-    print(f'Extracting train (aug {i+1}/{N_AUG})...')
-    d = extract(TRAIN_PATH, aug_transform, 'train', f'train aug {i+1}')
-    save(f'train_aug_{i}.pt', d)
-    print(f'train_aug_{i}: {d["features"].shape}')
+    if not exists(f'train_aug_{i}.pt'):
+        print(f'Extracting train (aug {i+1}/{N_AUG})...')
+        d = extract(TRAIN_PATH, aug_transform, 'train', f'train aug {i+1}')
+        save(f'train_aug_{i}.pt', d)
+        print(f'train_aug_{i}: {d["features"].shape}')
 
-print('Extracting test (base)...')
-d = extract(TEST_PATH, base_transform, 'test', 'test base')
-save('test_base.pt', d)
-print(f'test_base: {d["features"].shape}')
+if not exists('test_base.pt'):
+    print('Extracting test (base)...')
+    d = extract(TEST_PATH, base_transform, 'test', 'test base')
+    save('test_base.pt', d)
+    print(f'test_base: {d["features"].shape}')
 
 for i in range(N_TTA):
-    print(f'Extracting test (tta {i+1}/{N_TTA})...')
-    d = extract(TEST_PATH, aug_transform, 'test', f'test tta {i+1}')
-    save(f'test_tta_{i}.pt', d)
-    print(f'test_tta_{i}: {d["features"].shape}')
+    if not exists(f'test_tta_{i}.pt'):
+        print(f'Extracting test (tta {i+1}/{N_TTA})...')
+        d = extract(TEST_PATH, aug_transform, 'test', f'test tta {i+1}')
+        save(f'test_tta_{i}.pt', d)
+        print(f'test_tta_{i}: {d["features"].shape}')
 
 print(f'Done. Files saved to {model_dir}')
