@@ -18,7 +18,13 @@ from transforms import ReinhardTransform, make_base_transform, make_aug_transfor
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', type=str, default='uni2h', choices=SUPPORTED_MODELS)
+parser.add_argument('--no-reinhard', action='store_true')
+parser.add_argument('--n-aug', type=int, default=N_AUG)
+parser.add_argument('--n-tta', type=int, default=N_TTA)
 args = parser.parse_args()
+
+N_AUG = args.n_aug
+N_TTA = args.n_tta
 
 try:
     from kaggle_secrets import UserSecretsClient
@@ -39,13 +45,17 @@ print(f'Device: {device}  Model: {args.model}')
 model_dir = os.path.join(OUTPUT_DIR, args.model)
 os.makedirs(model_dir, exist_ok=True)
 
-with h5py.File(TRAIN_PATH, 'r') as hdf:
-    ref_img = np.array(hdf['16']['img'])
-
-reinhard = ReinhardTransform(ref_img)
-print('Reinhard normalizer fitted.')
-
 feature_extractor, timm_transform, feat_dim = load_feature_extractor(args.model, device)
+
+reinhard = None
+if not args.no_reinhard:
+    with h5py.File(TRAIN_PATH, 'r') as hdf:
+        ref_img = np.array(hdf['16']['img'])
+    reinhard = ReinhardTransform(ref_img)
+    print('Reinhard normalizer fitted.')
+else:
+    print('Reinhard normalization disabled.')
+
 base_transform = make_base_transform(timm_transform, reinhard)
 aug_transform  = make_aug_transform(timm_transform, reinhard)
 

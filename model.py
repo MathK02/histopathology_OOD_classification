@@ -35,14 +35,24 @@ class _HibouTransform:
 
 
 class _HibouWrapper(torch.nn.Module):
-    """Wraps Hibou AutoModel to return CLS token features directly."""
     def __init__(self, model):
         super().__init__()
         self.model = model
 
     def forward(self, x):
-        outputs = self.model(pixel_values=x)
-        return outputs.last_hidden_state[:, 0]
+        return self.model(pixel_values=x).last_hidden_state[:, 0]
+
+
+class _Virchow2Wrapper(torch.nn.Module):
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, x):
+        out = self.model(x)
+        class_token  = out[:, 0]
+        patch_tokens = out[:, 5:]
+        return torch.cat([class_token, patch_tokens.mean(1)], dim=-1)
 
 
 def load_feature_extractor(model_name: str, device: torch.device):
@@ -51,8 +61,9 @@ def load_feature_extractor(model_name: str, device: torch.device):
 
     Supported model_name values:
         'uni2h'   -> MahmoodLab/UNI2-h  (timm, gated)
-        'hibou-b' -> histai/hibou-b      (transformers, public)
-        'hibou-l' -> histai/hibou-L      (transformers, public)
+        'hibou-b'  -> histai/hibou-b      (transformers, public)
+        'hibou-l'  -> histai/hibou-L      (transformers, public)
+        'virchow2' -> paige-ai/Virchow2   (timm, gated)
     """
     if model_name == 'uni2h':
         model = timm.create_model(
@@ -72,8 +83,18 @@ def load_feature_extractor(model_name: str, device: torch.device):
         transform = _HibouTransform(processor)
         feat_dim  = 768 if model_name == 'hibou-b' else 1024
 
+    elif model_name == 'virchow2':
+        base_model = timm.create_model(
+            'hf-hub:paige-ai/Virchow2', pretrained=True,
+            mlp_layer=timm.layers.SwiGLUPacked, act_layer=torch.nn.SiLU,
+        ).to(device)
+        base_model.eval()
+        model     = _Virchow2Wrapper(base_model)
+        transform = create_transform(**resolve_data_config(base_model.pretrained_cfg, model=base_model))
+        feat_dim  = 2560
+
     else:
-        raise ValueError(f'Unknown model: {model_name}. Choose from: uni2h, hibou-b, hibou-l')
+        raise ValueError(f'Unknown model: {model_name}. Choose from: uni2h, hibou-b, hibou-l, virchow2')
 
     print(f'{model_name} loaded on {device}  (feat_dim={feat_dim})')
     return model, transform, feat_dim
