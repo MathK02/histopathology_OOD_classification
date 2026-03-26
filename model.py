@@ -83,6 +83,15 @@ def load_feature_extractor(model_name: str, device: torch.device):
         transform = _HibouTransform(processor)
         feat_dim  = 768 if model_name == 'hibou-b' else 1024
 
+    elif model_name == 'h-optimus-1':
+        model = timm.create_model(
+            'hf-hub:bioptimus/H-optimus-1', pretrained=True,
+            init_values=1e-5, dynamic_img_size=False,
+        ).to(device)
+        model.eval()
+        transform = create_transform(**resolve_data_config(model.pretrained_cfg, model=model))
+        feat_dim  = 1536
+
     elif model_name == 'virchow2':
         base_model = timm.create_model(
             'hf-hub:paige-ai/Virchow2', pretrained=True,
@@ -94,7 +103,7 @@ def load_feature_extractor(model_name: str, device: torch.device):
         feat_dim  = 2560
 
     else:
-        raise ValueError(f'Unknown model: {model_name}. Choose from: uni2h, hibou-b, hibou-l, virchow2')
+        raise ValueError(f'Unknown model: {model_name}. Choose from: {", ".join(["uni2h", "hibou-b", "hibou-l", "virchow2", "h-optimus-1"])}')
 
     print(f'{model_name} loaded on {device}  (feat_dim={feat_dim})')
     return model, transform, feat_dim
